@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RemoteView - Uzak Masaüstü</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ─── Bağlantı Ekranı ─────────────────────── -->
+    <div id="connect-screen" class="screen active">
+        <div class="connect-box">
+            <h1>🖥️ RemoteView</h1>
+            <p class="subtitle">Uzak Masaüstü İstemcisi v2.0</p>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Sunucu Adresi</label>
+                    <input type="text" id="server-host" value="localhost" placeholder="IP veya hostname">
+                </div>
+                <div class="form-group form-group-sm">
+                    <label>Port</label>
+                    <input type="number" id="server-port" value="8080" placeholder="8080">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Şifre <span class="label-hint">(opsiyonel — bağlanınca sorulur)</span></label>
+                <input type="password" id="server-password" placeholder="Bağlanınca modal açılır" autocomplete="current-password">
+            </div>
+
+            <button id="btn-connect" class="btn btn-primary btn-block">Bağlan</button>
+            <p id="connect-error" class="error hidden"></p>
+
+            <!-- Bağlantı Geçmişi -->
+            <div id="history-section" class="history-section hidden">
+                <p class="history-title">Son Bağlantılar</p>
+                <ul id="history-list"></ul>
+            </div>
+
+            <!-- Wake-on-LAN -->
+            <details class="wol-details">
+                <summary>🔔 Wake-on-LAN <span class="label-hint">(uyuyan bilgisayarı uyandır)</span></summary>
+                <div class="wol-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>MAC Adresi</label>
+                            <input type="text" id="wol-mac" placeholder="AA:BB:CC:DD:EE:FF" maxlength="17" autocomplete="off">
+                        </div>
+                        <div class="form-group form-group-sm">
+                            <label>Broadcast</label>
+                            <input type="text" id="wol-broadcast" value="255.255.255.255" placeholder="255.255.255.255">
+                        </div>
+                    </div>
+                    <div class="wol-actions">
+                        <button id="btn-wol-send"  class="btn btn-primary">🔔 Uyandır</button>
+                        <button id="btn-wol-sleep" class="btn btn-warning">💤 Uyut</button>
+                    </div>
+                    <p id="wol-status" class="wol-status hidden"></p>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <!-- ─── Uzak Masaüstü Ekranı ────────────────── -->
+    <div id="remote-screen" class="screen">
+
+        <!-- Üst araç çubuğu -->
+        <div id="toolbar">
+            <div class="toolbar-left">
+                <span class="logo">RemoteView</span>
+                <span id="connection-status" class="status connected">● Bağlı</span>
+                <span id="remote-os-badge"   class="os-badge"></span>
+                <span id="e2e-lock"          class="e2e-lock" title="Şifreleme bekleniyor...">🔓</span>
+                <span id="latency-display"   class="stat">-- ms</span>
+                <span id="fps-display"        class="stat">-- FPS</span>
+                <span id="bandwidth-display"  class="stat">-- KB/s</span>
+            </div>
+
+            <div class="toolbar-center">
+                <select id="monitor-select" class="select-sm" title="Monitör seç">
+                    <option value="1">Monitör 1</option>
+                </select>
+                <div class="quality-switcher">
+                    <button class="quality-btn active" data-quality="low"    title="Düşük - Hızlı">🟢</button>
+                    <button class="quality-btn"        data-quality="medium" title="Orta">🟡</button>
+                    <button class="quality-btn"        data-quality="high"   title="Yüksek">🟠</button>
+                    <button class="quality-btn"        data-quality="ultra"  title="Ultra - PNG">🔴</button>
+                </div>
+                <div class="zoom-group">
+                    <button id="btn-zoom-out"   class="btn btn-sm" title="Uzaklaştır (Ctrl+Alt+-)">−</button>
+                    <span   id="zoom-label"     class="zoom-label">100%</span>
+                    <button id="btn-zoom-in"    class="btn btn-sm" title="Yakınlaştır (Ctrl+Alt+=)">+</button>
+                    <button id="btn-zoom-reset" class="btn btn-sm" title="Zoom Sıfırla (Ctrl+Alt+0)">⊙</button>
+                </div>
+            </div>
+
+            <div class="toolbar-right">
+                <button id="btn-input-toggle" class="btn btn-sm btn-off"    title="Kontrol (Ctrl+Alt+I)">🖱️ KAPALI</button>
+                <button id="btn-screenshot"   class="btn btn-sm"            title="Ekran görüntüsü (Ctrl+Alt+S)">📷</button>
+                <button id="btn-clipboard"    class="btn btn-sm"            title="Pano (Ctrl+Alt+X)">📋</button>
+                <button id="btn-chat"         class="btn btn-sm"            title="Sohbet (Ctrl+Alt+C)">💬 <span id="chat-badge" class="badge hidden">0</span></button>
+                <button id="btn-sysinfo"      class="btn btn-sm"            title="Sistem bilgisi">🖥</button>
+                <button id="btn-fullscreen"   class="btn btn-sm"            title="Tam ekran (Ctrl+Alt+F)">⛶</button>
+                <button id="btn-shortcuts"    class="btn btn-sm"            title="Kısayollar (Ctrl+Alt+K)">⌨️</button>
+                <button id="btn-stats"        class="btn btn-sm"            title="İstatistikler (Ctrl+Alt+Q)">📊</button>
+                <button id="btn-disconnect"   class="btn btn-sm btn-danger" title="Bağlantıyı kes (Ctrl+Alt+D)">✕</button>
+            </div>
+        </div>
+
+        <!-- Canvas -->
+        <div id="canvas-container">
+            <canvas id="remote-canvas"></canvas>
+            <div id="drop-overlay" class="hidden">
+                <div class="drop-content">📁 Dosyayı bırakın — karşı tarafa gönderilecek</div>
+            </div>
+            <div id="reconnect-overlay" class="hidden">
+                <div class="overlay-content">
+                    <div class="spinner"></div>
+                    <p>Yeniden bağlanılıyor...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── Paneller ─────────────────────────── -->
+
+        <!-- Chat paneli -->
+        <div id="chat-panel" class="panel side-panel hidden">
+            <div class="panel-header">
+                <span>💬 Sohbet</span>
+                <button class="panel-close" onclick="app.togglePanel('chat-panel')">✕</button>
+            </div>
+            <div id="chat-messages" class="chat-messages"></div>
+            <div class="chat-input-row">
+                <input id="chat-input" type="text" placeholder="Mesaj yaz..." maxlength="500">
+                <button id="btn-chat-send" class="btn btn-sm btn-primary">↑</button>
+            </div>
+        </div>
+
+        <!-- Clipboard paneli -->
+        <div id="clipboard-panel" class="panel hidden">
+            <div class="panel-header">
+                <span>📋 Pano Senkronu</span>
+                <button class="panel-close" onclick="app.togglePanel('clipboard-panel')">✕</button>
+            </div>
+            <textarea id="clipboard-text" class="clipboard-area" placeholder="Uzak pano içeriği buraya gelecek..."></textarea>
+            <div class="panel-actions">
+                <button id="btn-clipboard-read"  class="btn btn-sm">📥 Uzaktan Oku</button>
+                <button id="btn-clipboard-write" class="btn btn-sm btn-primary">📤 Uzağa Yaz</button>
+            </div>
+        </div>
+
+        <!-- Sistem Bilgisi paneli -->
+        <div id="sysinfo-panel" class="panel hidden">
+            <div class="panel-header">
+                <span>🖥 Sistem Bilgisi</span>
+                <button class="panel-close" onclick="app.togglePanel('sysinfo-panel')">✕</button>
+            </div>
+            <div id="sysinfo-content" class="sysinfo-content">
+                <p class="muted">Yükleniyor...</p>
+            </div>
+        </div>
+
+        <!-- İstatistik paneli -->
+        <div id="stats-panel" class="panel hidden">
+            <div class="panel-header">
+                <span>📊 İstatistikler</span>
+                <button class="panel-close" onclick="app.toggleStats()">✕</button>
+            </div>
+            <div class="stat-row"><span>Gönderilen Kare:</span><span id="stat-frames">0</span></div>
+            <div class="stat-row"><span>Toplam Veri:</span>    <span id="stat-data">0 MB</span></div>
+            <div class="stat-row"><span>Ortalama FPS:</span>   <span id="stat-avgfps">0</span></div>
+            <div class="stat-row"><span>Çalışma Süresi:</span><span id="stat-uptime">0s</span></div>
+            <div class="stat-row"><span>Geçerli Kalite:</span><span id="stat-quality">Düşük</span></div>
+            <div class="stat-row"><span>Gecikme:</span>        <span id="stat-latency">-- ms</span></div>
+            <div class="stat-row"><span>Bağlı İstemci:</span><span id="stat-clients">--</span></div>
+        </div>
+
+        <!-- Kısayollar paneli -->
+        <div id="shortcuts-panel" class="panel hidden">
+            <div class="panel-header">
+                <span>⌨️ Kısayollar</span>
+                <button class="panel-close" onclick="app.togglePanel('shortcuts-panel')">✕</button>
+            </div>
+            <table class="shortcut-table">
+                <tr><td><kbd>Ctrl+Alt+F</kbd></td><td>Tam Ekran</td></tr>
+                <tr><td><kbd>Ctrl+Alt+I</kbd></td><td>Kontrol Aç/Kapat</td></tr>
+                <tr><td><kbd>Ctrl+Alt+S</kbd></td><td>Ekran Görüntüsü</td></tr>
+                <tr><td><kbd>Ctrl+Alt+X</kbd></td><td>Pano Paneli</td></tr>
+                <tr><td><kbd>Ctrl+Alt+C</kbd></td><td>Sohbet</td></tr>
+                <tr><td><kbd>Ctrl+Alt+Q</kbd></td><td>İstatistikler</td></tr>
+                <tr><td><kbd>Ctrl+Alt+K</kbd></td><td>Bu Panel</td></tr>
+                <tr><td><kbd>Ctrl+Alt+=</kbd></td><td>Yakınlaştır</td></tr>
+                <tr><td><kbd>Ctrl+Alt+-</kbd></td><td>Uzaklaştır</td></tr>
+                <tr><td><kbd>Ctrl+Alt+0</kbd></td><td>Zoom Sıfırla</td></tr>
+                <tr><td><kbd>Ctrl+Alt+D</kbd></td><td>Bağlantıyı Kes</td></tr>
+            </table>
+            <p class="shortcut-note">* Kontrol açıkken tüm tuşlar uzak masaüstüne iletilir.</p>
+        </div>
+
+    </div><!-- /remote-screen -->
+
+    <!-- Toast bildirimleri -->
+    <div id="toast-container"></div>
+
+    <!-- Şifre Modalı -->
+    <div id="auth-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-icon">🔐</div>
+            <h2 class="modal-title">Sunucu Şifre Gerektiriyor</h2>
+            <p class="modal-desc">Bağlanmak için sunucu şifresini girin.</p>
+            <div class="form-group">
+                <label>Sunucu Şifresi</label>
+                <input type="password" id="modal-password" placeholder="Şifre..." autocomplete="current-password">
+            </div>
+            <p id="modal-error" class="error hidden">Hatalı şifre, tekrar deneyin.</p>
+            <div class="modal-actions">
+                <button id="btn-modal-cancel" class="btn">Vazgeç</button>
+                <button id="btn-modal-submit" class="btn btn-primary">Giriş</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
