@@ -1,0 +1,28 @@
+{
+  "_comment": "EmareCloud Deploy Manifesti — Bu dosya EmareCloud paneli tarafından okunur. Manuel değiştirme.",
+  "slug": "emaredesk",
+  "name": "Emare Desk",
+  "github_repo": "emraresoftware/emaredesk",
+  "branch": "main",
+  "dc": "local",
+  "server_host": "",
+  "server_ssh_port": 22,
+  "remote_path": "/opt/emaredesk",
+  "stack": "python-gunicorn",
+  "port": 8328,
+  "webroot": "/opt/emaredesk",
+  "domain": "",
+  "pre_deploy": [],
+  "deploy_commands": [
+    "cd /opt/emaredesk",
+    "git pull origin main",
+    "source venv/bin/activate",
+    "pip install -r requirements.txt --quiet",
+    "systemctl restart emaredesk"
+  ],
+  "restart_command": "systemctl restart emaredesk",
+  "health_check_url": "http://localhost:8328",
+  "webhooks_enabled": true,
+  "auto_deploy_on_push": true,
+  "notify_on_fail": true
+}
